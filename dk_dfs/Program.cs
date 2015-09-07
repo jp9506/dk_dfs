@@ -10,6 +10,7 @@ namespace dk_dfs
     {
         static void Main(string[] args)
         {
+            List<dk.MLB.Player> players = dk.MLB.GetData();
         }
     }
 }
