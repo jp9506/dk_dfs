@@ -85,7 +85,7 @@ namespace dk
             }
             public override string ToString()
             {
-                return this.Name + " (" + this.Team + ")";
+                return this.Name + " (" + this.Team + ")" + (this.Starter ? " *" : "");
             }
         }
         public class Lineup

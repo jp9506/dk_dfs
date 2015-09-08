@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Net;
+using System.Net.Cache;
 using System.IO;
 
 namespace dk
@@ -12,7 +13,9 @@ namespace dk
     {
         public static string[] Browse(string URL)
         {
-            WebRequest HttpWebReq = WebRequest.Create(URL);
+            string url = URL + (URL.Contains('?') ? "&" : "?") + "myvarticks=" + DateTime.Now.Ticks;
+            WebRequest HttpWebReq = WebRequest.Create(url);
+            HttpWebReq.CachePolicy = new RequestCachePolicy(RequestCacheLevel.BypassCache);
             WebResponse HttpWebResponse = HttpWebReq.GetResponse();
             Stream ResponseStream = HttpWebResponse.GetResponseStream();
             StreamReader sr = new StreamReader(ResponseStream);

@@ -15,7 +15,7 @@ namespace dk_dfs
             else if (args[0].ToLower() == "mlb")
             {
                 IEnumerable<dk.MLB.Player> players = dk.MLB.GetData();
-                if (args[1].ToLower() == "/s")
+                if (args.Length > 1 && args[1].ToLower() == "/s")
                     players = players.Where(x => x.Starter);
                 dk.MLB.Lineup opt = new dk.MLB.Lineup();
                 if (opt.Optimize(players, 50000))
