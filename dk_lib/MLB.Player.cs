@@ -26,6 +26,7 @@ namespace dk
             public string Name { get; set; }
             public double Salary { get; set; }
             public double Projection { get; set; }
+            public string Team { get; set; }
             public bool Starter { get; set; }
             public double Value
             {
@@ -55,7 +56,9 @@ namespace dk
                 string[] data = pString.Split('\t');
                 string[] namepos = data[0].Split('(');
                 res.Name = namepos[0].Trim();
-                string[] pos = namepos[1].Replace(")", "").Split('-')[1].Trim().Split('/');
+                string[] teampos = namepos[1].Replace(")", "").Split('-');
+                string[] pos = teampos[1].Trim().Split('/');
+                res.Team = teampos[0].Trim();
                 res.Pos = Position.None;
                 foreach (string p in pos)
                 {
@@ -77,6 +80,10 @@ namespace dk
                 else
                     res.Starter = (data[2] != "-");
                 return res;
+            }
+            public override string ToString()
+            {
+                return this.Name + " (" + this.Team + ")";
             }
         }
         public class Lineup
@@ -135,7 +142,7 @@ namespace dk
                 if (!this.HasNull()) return true;
                 Lineup optLineup = this.Copy();
                 double tSalary = this.Salary;
-                List<Player> subs = new List<Player>(players
+                List<Player> subs = players
                     .Where(x => x.Salary + tSalary <= maxSalary)
                     .Where(x =>
                         ((this.P1 == null || this.P2 == null) && (x.Pos & Position.P) != Position.None) ||
@@ -145,11 +152,229 @@ namespace dk
                         ((this.B3 == null) && (x.Pos & Position.B3) != Position.None) ||
                         ((this.SS == null) && (x.Pos & Position.SS) != Position.None) ||
                         ((this.OF1 == null || this.OF2 == null || this.OF3 == null) && (x.Pos & Position.OF) != Position.None)
-                    ));
-
-                while (subs.Count > 0)
+                    ).ToList();
+                if (this.P1 == null)
                 {
-
+                    optLineup.P1 = subs.Where(x => (x.Pos & Position.P) != Position.None).OrderBy(x => x.Salary).ThenByDescending(x => x.Projection).FirstOrDefault();
+                    if (optLineup.P1 != null) subs.Remove(optLineup.P1);
+                }
+                if (this.P2 == null)
+                {
+                    optLineup.P2 = subs.Where(x => (x.Pos & Position.P) != Position.None).OrderBy(x => x.Salary).ThenByDescending(x => x.Projection).FirstOrDefault();
+                    if (optLineup.P2 != null) subs.Remove(optLineup.P2);
+                }
+                if (this.C == null)
+                {
+                    optLineup.C = subs.Where(x => (x.Pos & Position.C) != Position.None).OrderBy(x => x.Salary).ThenByDescending(x => x.Projection).FirstOrDefault();
+                    if (optLineup.C != null) subs.Remove(optLineup.C);
+                }
+                if (this.B1 == null)
+                {
+                    optLineup.B1 = subs.Where(x => (x.Pos & Position.B1) != Position.None).OrderBy(x => x.Salary).ThenByDescending(x => x.Projection).FirstOrDefault();
+                    if (optLineup.B1 != null) subs.Remove(optLineup.B1);
+                }
+                if (this.B2 == null)
+                {
+                    optLineup.B2 = subs.Where(x => (x.Pos & Position.B2) != Position.None).OrderBy(x => x.Salary).ThenByDescending(x => x.Projection).FirstOrDefault();
+                    if (optLineup.B2 != null) subs.Remove(optLineup.B2);
+                }
+                if (this.B3 == null)
+                {
+                    optLineup.B3 = subs.Where(x => (x.Pos & Position.B3) != Position.None).OrderBy(x => x.Salary).ThenByDescending(x => x.Projection).FirstOrDefault();
+                    if (optLineup.B3 != null) subs.Remove(optLineup.B3);
+                }
+                if (this.SS == null)
+                {
+                    optLineup.SS = subs.Where(x => (x.Pos & Position.SS) != Position.None).OrderBy(x => x.Salary).ThenByDescending(x => x.Projection).FirstOrDefault();
+                    if (optLineup.SS != null) subs.Remove(optLineup.SS);
+                }
+                if (this.OF1 == null)
+                {
+                    optLineup.OF1 = subs.Where(x => (x.Pos & Position.OF) != Position.None).OrderBy(x => x.Salary).ThenByDescending(x => x.Projection).FirstOrDefault();
+                    if (optLineup.OF1 != null) subs.Remove(optLineup.OF1);
+                }
+                if (this.OF2 == null)
+                {
+                    optLineup.OF2 = subs.Where(x => (x.Pos & Position.OF) != Position.None).OrderBy(x => x.Salary).ThenByDescending(x => x.Projection).FirstOrDefault();
+                    if (optLineup.OF2 != null) subs.Remove(optLineup.OF2);
+                }
+                if (this.OF3 == null)
+                {
+                    optLineup.OF3 = subs.Where(x => (x.Pos & Position.OF) != Position.None).OrderBy(x => x.Salary).ThenByDescending(x => x.Projection).FirstOrDefault();
+                    if (optLineup.OF3 != null) subs.Remove(optLineup.OF3);
+                }
+                while (subs.Count() > 0)
+                {
+                    // Keep only players whose projection is greater than or equal to a player they could replace
+                    // And their salary allows them to replace said player
+                    double oSalary = optLineup.Salary;
+                    subs = subs
+                        .Where(x =>
+                            (this.P1 == null && (x.Pos & Position.P) != Position.None && oSalary + x.Salary - optLineup.P1.Salary <= maxSalary && x.Projection >= optLineup.P1.Projection) ||
+                            (this.P2 == null && (x.Pos & Position.P) != Position.None && oSalary + x.Salary - optLineup.P2.Salary <= maxSalary && x.Projection >= optLineup.P2.Projection) ||
+                            (this.C == null && (x.Pos & Position.C) != Position.None && oSalary + x.Salary - optLineup.C.Salary <= maxSalary && x.Projection >= optLineup.C.Projection) ||
+                            (this.B1 == null && (x.Pos & Position.B1) != Position.None && oSalary + x.Salary - optLineup.B1.Salary <= maxSalary && x.Projection >= optLineup.B1.Projection) ||
+                            (this.B2 == null && (x.Pos & Position.B2) != Position.None && oSalary + x.Salary - optLineup.B2.Salary <= maxSalary && x.Projection >= optLineup.B2.Projection) ||
+                            (this.B3 == null && (x.Pos & Position.B3) != Position.None && oSalary + x.Salary - optLineup.B3.Salary <= maxSalary && x.Projection >= optLineup.B3.Projection) ||
+                            (this.SS == null && (x.Pos & Position.SS) != Position.None && oSalary + x.Salary - optLineup.SS.Salary <= maxSalary && x.Projection >= optLineup.SS.Projection) ||
+                            (this.OF1 == null && (x.Pos & Position.OF) != Position.None && oSalary + x.Salary - optLineup.OF1.Salary <= maxSalary && x.Projection >= optLineup.OF1.Projection) ||
+                            (this.OF2 == null && (x.Pos & Position.OF) != Position.None && oSalary + x.Salary - optLineup.OF2.Salary <= maxSalary && x.Projection >= optLineup.OF2.Projection) ||
+                            (this.OF3 == null && (x.Pos & Position.OF) != Position.None && oSalary + x.Salary - optLineup.OF3.Salary <= maxSalary && x.Projection >= optLineup.OF3.Projection)
+                        ).ToList();
+                    // Determine best option to replace a player
+                    double bestScore = -1;
+                    string strPosition = null;
+                    Player sub = null;
+                    if (this.P1 == null)
+                    {
+                        Player p = subs.Where(x => (x.Pos & Position.P) != Position.None && oSalary + x.Salary - optLineup.P1.Salary <= maxSalary).OrderByDescending(x => x - optLineup.P1).FirstOrDefault();
+                        if (p != null && p - optLineup.P1 > bestScore)
+                        {
+                            strPosition = "P1";
+                            bestScore = p - optLineup.P1;
+                            sub = p;
+                        }
+                    }
+                    if (this.P2 == null)
+                    {
+                        Player p = subs.Where(x => (x.Pos & Position.P) != Position.None && oSalary + x.Salary - optLineup.P2.Salary <= maxSalary).OrderByDescending(x => x - optLineup.P2).FirstOrDefault();
+                        if (p != null && p - optLineup.P2 > bestScore)
+                        {
+                            strPosition = "P2";
+                            bestScore = p - optLineup.P2;
+                            sub = p;
+                        }
+                    }
+                    if (this.C == null)
+                    {
+                        Player p = subs.Where(x => (x.Pos & Position.C) != Position.None && oSalary + x.Salary - optLineup.C.Salary <= maxSalary).OrderByDescending(x => x - optLineup.C).FirstOrDefault();
+                        if (p != null && p - optLineup.C > bestScore)
+                        {
+                            strPosition = "C";
+                            bestScore = p - optLineup.C;
+                            sub = p;
+                        }
+                    }
+                    if (this.B1 == null)
+                    {
+                        Player p = subs.Where(x => (x.Pos & Position.B1) != Position.None && oSalary + x.Salary - optLineup.B1.Salary <= maxSalary).OrderByDescending(x => x - optLineup.B1).FirstOrDefault();
+                        if (p != null && p - optLineup.B1 > bestScore)
+                        {
+                            strPosition = "B1";
+                            bestScore = p - optLineup.B1;
+                            sub = p;
+                        }
+                    }
+                    if (this.B2 == null)
+                    {
+                        Player p = subs.Where(x => (x.Pos & Position.B2) != Position.None && oSalary + x.Salary - optLineup.B2.Salary <= maxSalary).OrderByDescending(x => x - optLineup.B2).FirstOrDefault();
+                        if (p != null && p - optLineup.B2 > bestScore)
+                        {
+                            strPosition = "B2";
+                            bestScore = p - optLineup.B2;
+                            sub = p;
+                        }
+                    }
+                    if (this.B3 == null)
+                    {
+                        Player p = subs.Where(x => (x.Pos & Position.B3) != Position.None && oSalary + x.Salary - optLineup.B3.Salary <= maxSalary).OrderByDescending(x => x - optLineup.B3).FirstOrDefault();
+                        if (p != null && p - optLineup.B3 > bestScore)
+                        {
+                            strPosition = "B3";
+                            bestScore = p - optLineup.B3;
+                            sub = p;
+                        }
+                    }
+                    if (this.SS == null)
+                    {
+                        Player p = subs.Where(x => (x.Pos & Position.SS) != Position.None && oSalary + x.Salary - optLineup.SS.Salary <= maxSalary).OrderByDescending(x => x - optLineup.SS).FirstOrDefault();
+                        if (p != null && p - optLineup.SS > bestScore)
+                        {
+                            strPosition = "SS";
+                            bestScore = p - optLineup.SS;
+                            sub = p;
+                        }
+                    }
+                    if (this.OF1 == null)
+                    {
+                        Player p = subs.Where(x => (x.Pos & Position.OF) != Position.None && oSalary + x.Salary - optLineup.OF1.Salary <= maxSalary).OrderByDescending(x => x - optLineup.OF1).FirstOrDefault();
+                        if (p != null && p - optLineup.OF1 > bestScore)
+                        {
+                            strPosition = "OF1";
+                            bestScore = p - optLineup.OF1;
+                            sub = p;
+                        }
+                    }
+                    if (this.OF2 == null)
+                    {
+                        Player p = subs.Where(x => (x.Pos & Position.OF) != Position.None && oSalary + x.Salary - optLineup.OF2.Salary <= maxSalary).OrderByDescending(x => x - optLineup.OF2).FirstOrDefault();
+                        if (p != null && p - optLineup.OF2 > bestScore)
+                        {
+                            strPosition = "OF2";
+                            bestScore = p - optLineup.OF2;
+                            sub = p;
+                        }
+                    }
+                    if (this.OF3 == null)
+                    {
+                        Player p = subs.Where(x => (x.Pos & Position.OF) != Position.None && oSalary + x.Salary - optLineup.OF3.Salary <= maxSalary).OrderByDescending(x => x - optLineup.OF3).FirstOrDefault();
+                        if (p != null && p - optLineup.OF3 > bestScore)
+                        {
+                            strPosition = "OF3";
+                            bestScore = p - optLineup.OF3;
+                            sub = p;
+                        }
+                    }
+                    if (sub == null)
+                    {
+                        subs.Clear();
+                    }
+                    else
+                    {
+                        switch (strPosition)
+                        {
+                            case "P1":
+                                subs.Add(optLineup.P1);
+                                optLineup.P1 = sub;
+                                break;
+                            case "P2":
+                                subs.Add(optLineup.P2);
+                                optLineup.P2 = sub;
+                                break;
+                            case "C":
+                                subs.Add(optLineup.C);
+                                optLineup.C = sub;
+                                break;
+                            case "B1":
+                                subs.Add(optLineup.B1);
+                                optLineup.B1 = sub;
+                                break;
+                            case "B2":
+                                subs.Add(optLineup.B2);
+                                optLineup.B2 = sub;
+                                break;
+                            case "B3":
+                                subs.Add(optLineup.B3);
+                                optLineup.B3 = sub;
+                                break;
+                            case "SS":
+                                subs.Add(optLineup.SS);
+                                optLineup.SS = sub;
+                                break;
+                            case "OF1":
+                                subs.Add(optLineup.OF1);
+                                optLineup.OF1 = sub;
+                                break;
+                            case "OF2":
+                                subs.Add(optLineup.OF2);
+                                optLineup.OF2 = sub;
+                                break;
+                            case "OF3":
+                                subs.Add(optLineup.OF3);
+                                optLineup.OF3 = sub;
+                                break;
+                        }
+                    }
                 }
                 if (!optLineup.HasNull())
                 {
