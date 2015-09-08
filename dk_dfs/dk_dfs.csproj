@@ -49,6 +49,9 @@
     <Compile Include="..\dk_lib\MLB.Player.cs">
       <Link>MLB.Player.cs</Link>
     </Compile>
+    <Compile Include="..\dk_lib\NFL.Player.cs">
+      <Link>NFL.Player.cs</Link>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

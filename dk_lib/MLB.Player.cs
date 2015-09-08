@@ -27,6 +27,7 @@ namespace dk
             public double Salary { get; set; }
             public double Projection { get; set; }
             public string Team { get; set; }
+            public DateTime GameTime { get; set; }
             public bool Starter { get; set; }
             public double Value
             {
@@ -73,6 +74,7 @@ namespace dk
                         case "OF":res.Pos |= Position.OF; break;
                     }
                 }
+                res.GameTime = DateTime.Parse(DateTime.Now.ToShortDateString() + " " + data[data.Length - 12]);
                 res.Salary = double.Parse(data[data.Length - 3].Replace("$", ""));
                 res.Projection = double.Parse(data[data.Length - 4].Replace(" pts", ""));
                 if (data.Length == 14)
@@ -110,6 +112,24 @@ namespace dk
                 get
                 {
                     return this.ToArray().Where(x => x != null).Sum(x => x.Projection);
+                }
+            }
+            public string ForOutput
+            {
+                get
+                {
+                    return
+                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:C0}\n", "P", P1.ToString(), P1.Projection, P1.Salary) +
+                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:C0}\n", "P", P2.ToString(), P2.Projection, P2.Salary) +
+                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:C0}\n", "C", C.ToString(), C.Projection, C.Salary) +
+                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:C0}\n", "1B", B1.ToString(), B1.Projection, B1.Salary) +
+                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:C0}\n", "2B", B2.ToString(), B2.Projection, B2.Salary) +
+                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:C0}\n", "3B", B3.ToString(), B3.Projection, B3.Salary) +
+                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:C0}\n", "SS", SS.ToString(), SS.Projection, SS.Salary) +
+                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:C0}\n", "OF", OF1.ToString(), OF1.Projection, OF1.Salary) +
+                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:C0}\n", "OF", OF2.ToString(), OF2.Projection, OF2.Salary) +
+                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:C0}\n", "OF", OF3.ToString(), OF3.Projection, OF3.Salary) +
+                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:C0}\n", "", "", this.Projection, this.Salary);
                 }
             }
             public Player[] ToArray()
@@ -203,6 +223,7 @@ namespace dk
                     optLineup.OF3 = subs.Where(x => (x.Pos & Position.OF) != Position.None).OrderBy(x => x.Salary).ThenByDescending(x => x.Projection).FirstOrDefault();
                     if (optLineup.OF3 != null) subs.Remove(optLineup.OF3);
                 }
+                if (optLineup.HasNull()) return false;
                 while (subs.Count() > 0)
                 {
                     // Keep only players whose projection is greater than or equal to a player they could replace
@@ -331,6 +352,7 @@ namespace dk
                     }
                     else
                     {
+                        subs.Remove(sub);
                         switch (strPosition)
                         {
                             case "P1":
@@ -393,6 +415,7 @@ namespace dk
                 else
                     return false;
             }
+
         }
 		public static List<Player> GetData()
         {
@@ -408,7 +431,7 @@ namespace dk
         }
 		private static List<Player> GetData(Position p, string posString)
         {
-            string url = MLB.URL + posString;
+            string url = URL + posString;
             string[] resp = Browser.Browse(url);
             List<Player> res = new List<Player>(
                 resp.Skip(6)
