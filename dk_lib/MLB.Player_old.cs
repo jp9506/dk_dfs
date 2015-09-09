@@ -1,170 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Runtime.Serialization.Json;
-using System.IO;
-using System.Runtime.Serialization;
 
-namespace dk
+namespace _dk
 {
     public class MLB
     {
-        public const string URL_FP = "http://www.fantasypros.com/mlb/draftkings-cheatsheet.php?export=xls&position=";
-        public const string URL_PERIODS = "http://c0smosis.com/FantasyDaily/GetPeriods?sportId=3&version=2&site=1";
-        public const string URL_DATA = "http://c0smosis.com/FantasyDaily/ApplSalaries?id=1&v=3&periodID=";
-        private static Dictionary<string, double> _projectiondata = null;
-        private static Dictionary<string, double> ProjectionData
-        {
-            get
-            {
-                if (_projectiondata == null)
-                {
-                    string periodJSON = string.Join("", dk.Browser.Browse(URL_PERIODS));
-                    PeriodsClass pers = JSON<PeriodsClass>.Parse(periodJSON);
-                    int pid = pers.Periods.Max(x => x.PeriodID);
-                    string salaryJSON = string.Join("", dk.Browser.Browse(URL_DATA + pid));
-                    SalaryDataClass salarydata = JSON<SalaryDataClass>.Parse(salaryJSON);
-                    salarydata.SetTeams();
-                    _projectiondata = new Dictionary<string, double>();
-                    var notes = salarydata.SALARIES.SelectMany(x => x.Notes).Distinct().OrderBy(x => x.Key).ThenBy(x => x.Msg).ToArray();
-                    foreach (SalaryClass x in salarydata.SALARIES)
-                    {
-                        if (!x.Notes.Any(y => (y.Key == (int)NoteKeys.InclimateWeather || y.Key == (int)NoteKeys.Inactive)))
-                            _projectiondata.Add(x.Key, x.PROJ);
-                    }
-                }
-                return _projectiondata;
-            }
-        }
-        private static class JSON<T> where T : class
-        {
-            public static T Parse(string json)
-            {
-                using (var stream = new MemoryStream(Encoding.Default.GetBytes(json)))
-                {
-                    var serializer = new DataContractJsonSerializer(typeof(T));
-                    return serializer.ReadObject(stream) as T;
-                }
-            }
-            public static string Parse(T instance)
-            {
-                using (var stream = new MemoryStream())
-                {
-                    var serializer = new DataContractJsonSerializer(typeof(T));
-                    serializer.WriteObject(stream, instance);
-                    return Encoding.Default.GetString(stream.ToArray());
-                }
-            }
-        }
-#region JSON Data Classes
-        [DataContract] private class PeriodsClass
-        {
-            [DataMember] public PeriodClass[] Periods { get; set; }
-            [DataMember] public int Sport { get; set; }
-        }
-        [DataContract] private class PeriodClass
-        {
-            [DataMember] public int Tokens { get; set; }
-            [DataMember] public int SalaryCap { get; set; }
-            [DataMember] public string RequiredPositions { get; set; }
-            [DataMember] public string Name { get; set; }
-            [DataMember] public int PeriodID { get; set; }
-            [DataMember] public long Updated { get; set; }
-        }
-        [DataContract] private class SalaryDataClass
-        {
-            [DataMember] public int PeriodID { get; set; }
-            [DataMember] public GameClass[] GAMES { get; set; }
-            [DataMember] public SalaryClass[] SALARIES { get; set; }
-            public void SetTeams()
-            {
-                foreach (SalaryClass x in SALARIES)
-                {
-                    GameClass g = GAMES[x.GI];
-                    x.Team = g.GI.Split(' ')[0].Split('@')[x.TM - 1];
-                    if (x.Name == "Nori Aoki") x.Name = "Norichika Aoki";
-                    if (x.Name == "Michael A. Taylor") x.Name = "Michael Taylor";
-                }
-            }
-        }
-        [DataContract] private class GameClass
-        {
-            [DataMember] public string GI { get; set; }
-            [DataMember] public bool DONE { get; set; }
-        }
-        [DataContract] private class SalaryClass
-        {
-            [DataMember] public int PID { get; set; }
-            [DataMember] public int PLA { get; set; }
-            [DataMember] public int DID { get; set; }
-            [DataMember] public int DGID { get; set; }
-            [DataMember] public int PS { get; set; }
-            [DataMember] public int IS { get; set; }
-            [DataMember] public string NOT { get; set; }
-            [DataMember] public int FL { get; set; }
-            [DataMember] public int CL { get; set; }
-            [DataMember] public int CON { get; set; }
-            [DataMember] public int MAT { get; set; }
-            [DataMember] public int TM { get; set; }
-            [DataMember] public string Name { get; set; }
-            [DataMember] public string Pos { get; set; }
-            [DataMember] public int GI { get; set; }
-            [DataMember] public int Salary { get; set; }
-            [DataMember] public double PROJ { get; set; }
-            public string Team { get; set; }
-            public string Key
-            {
-                get
-                {
-                    return (Name.ToUpper().Replace("JR.", "").Replace(" ", "").Replace("-", "") + " - " + Team.ToUpper().Replace("WAS", "WSH") + " - " + Salary).ToUpper();
-                }
-            }
-            public NoteClass[] Notes
-            {
-                get
-                {
-                    return NOT.Split(';')
-                        .Where(x => x != "")
-                        .Select(x =>
-                        {
-                            string[] xx = x.Split('|');
-                            return new NoteClass()
-                            {
-                                Key = int.Parse(xx[0]),
-                                Msg = xx[1]
-                            };
-                        }).ToArray();
-                }
-            }
-        }
-        private class NoteClass : IComparable<NoteClass>
-        {
-            public int Key { get; set; }
-            public string Msg { get; set; }
-            public int CompareTo(NoteClass other)
-            {
-                return this.ToString().CompareTo(other.ToString());
-            }
-            public override bool Equals(object obj)
-            {
-                return typeof(NoteClass) == obj.GetType() && this.CompareTo((NoteClass)obj) == 0;
-            }
-            public override int GetHashCode()
-            {
-                return this.Key;
-            }
-            public override string ToString()
-            {
-                return Key + "|" + Msg;
-            }
-        }
-        private enum NoteKeys
-        {
-            InclimateWeather = 1,
-            Inactive = 2048
-        }
-#endregion
+        public const string URL = "http://www.fantasypros.com/mlb/draftkings-cheatsheet.php?export=xls&position=";
         public enum Position
         {
             None = 0,
@@ -182,7 +24,6 @@ namespace dk
             public string Name { get; set; }
             public double Salary { get; set; }
             public double Projection { get; set; }
-            public double FP_Proj { get; set; }
             public string Team { get; set; }
             public DateTime GameTime { get; set; }
             public bool Starter { get; set; }
@@ -191,13 +32,6 @@ namespace dk
                 get
                 {
                     return 1000 * Projection / Salary;
-                }
-            }
-            public string Key
-            {
-                get
-                {
-                    return (Name.ToUpper().Replace("JR.", "").Replace(" ", "").Replace("-", "") + " - " + Team + " - " + (int)Salary).ToUpper();
                 }
             }
             public static double operator -(Player a, Player b)
@@ -240,13 +74,9 @@ namespace dk
                 }
                 res.GameTime = DateTime.Parse(DateTime.Now.ToShortDateString() + " " + data[data.Length - 12]);
                 res.Salary = double.Parse(data[data.Length - 3].Replace("$", ""));
-                res.FP_Proj = double.Parse(data[data.Length - 4].Replace(" pts", ""));
-                if (ProjectionData.ContainsKey(res.Key))
-                    res.Projection = ProjectionData[res.Key];
-                else
-                    res.Projection = 0;
+                res.Projection = double.Parse(data[data.Length - 4].Replace(" pts", ""));
                 if (data.Length == 14)
-                    res.Starter = (res.FP_Proj > 0);
+                    res.Starter = (res.Projection > 0);
                 else
                     res.Starter = (data[2] != "-");
                 return res;
@@ -282,29 +112,22 @@ namespace dk
                     return this.ToArray().Where(x => x != null).Sum(x => x.Projection);
                 }
             }
-            public double FP_Proj
-            {
-                get
-                {
-                    return this.ToArray().Where(x => x != null).Sum(x => x.FP_Proj);
-                }
-            }
             public string ForOutput
             {
                 get
                 {
                     return
-                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:N2}{4,10:C0}\n", "P", P1.ToString(), P1.Projection, P1.FP_Proj, P1.Salary) +
-                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:N2}{4,10:C0}\n", "P", P2.ToString(), P2.Projection, P2.FP_Proj, P2.Salary) +
-                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:N2}{4,10:C0}\n", "C", C.ToString(), C.Projection, C.FP_Proj, C.Salary) +
-                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:N2}{4,10:C0}\n", "1B", B1.ToString(), B1.Projection, B1.FP_Proj, B1.Salary) +
-                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:N2}{4,10:C0}\n", "2B", B2.ToString(), B2.Projection, B2.FP_Proj, B2.Salary) +
-                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:N2}{4,10:C0}\n", "3B", B3.ToString(), B3.Projection, B3.FP_Proj, B3.Salary) +
-                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:N2}{4,10:C0}\n", "SS", SS.ToString(), SS.Projection, SS.FP_Proj, SS.Salary) +
-                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:N2}{4,10:C0}\n", "OF", OF1.ToString(), OF1.Projection, OF1.FP_Proj, OF1.Salary) +
-                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:N2}{4,10:C0}\n", "OF", OF2.ToString(), OF2.Projection, OF2.FP_Proj, OF2.Salary) +
-                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:N2}{4,10:C0}\n", "OF", OF3.ToString(), OF3.Projection, OF3.FP_Proj, OF3.Salary) +
-                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:N2}{4,10:C0}\n", "", "", this.Projection, this.FP_Proj, this.Salary);
+                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:C0}\n", "P", P1.ToString(), P1.Projection, P1.Salary) +
+                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:C0}\n", "P", P2.ToString(), P2.Projection, P2.Salary) +
+                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:C0}\n", "C", C.ToString(), C.Projection, C.Salary) +
+                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:C0}\n", "1B", B1.ToString(), B1.Projection, B1.Salary) +
+                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:C0}\n", "2B", B2.ToString(), B2.Projection, B2.Salary) +
+                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:C0}\n", "3B", B3.ToString(), B3.Projection, B3.Salary) +
+                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:C0}\n", "SS", SS.ToString(), SS.Projection, SS.Salary) +
+                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:C0}\n", "OF", OF1.ToString(), OF1.Projection, OF1.Salary) +
+                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:C0}\n", "OF", OF2.ToString(), OF2.Projection, OF2.Salary) +
+                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:C0}\n", "OF", OF3.ToString(), OF3.Projection, OF3.Salary) +
+                        String.Format("{0,-3}{1,-40}{2,6:N2}{3,10:C0}\n", "", "", this.Projection, this.Salary);
                 }
             }
             public Player[] ToArray()
@@ -606,7 +429,7 @@ namespace dk
         }
 		private static List<Player> GetData(Position p, string posString)
         {
-            string url = URL_FP + posString;
+            string url = URL + posString;
             string[] resp = dk.Browser.Browse(url);
             List<Player> res = new List<Player>(
                 resp.Skip(6)

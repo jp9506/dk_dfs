@@ -1,34 +1,57 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace dk_dfs
 {
     class Program
     {
+        private enum Game
+        {
+            None,
+            NFL,
+            MLB
+        }
         static void Main(string[] args)
         {
             if (args.Length == 0)
             { }
-            else if (args[0].ToLower() == "mlb")
+            else
             {
-                IEnumerable<dk.MLB.Player> players = dk.MLB.GetData();
-                if (args.Length > 1 && args[1].ToLower() == "/s")
-                    players = players.Where(x => x.Starter);
-                dk.MLB.Lineup opt = new dk.MLB.Lineup();
-                if (opt.Optimize(players, 50000))
+                Game g = Game.None;
+                bool startersOnly = false;
+                DateTime gametimeMin = DateTime.MinValue;
+                DateTime gametimeMax = DateTime.MaxValue;
+                for (int i = 0; i < args.Length; i++)
                 {
-                    Console.WriteLine(opt.ForOutput);
+                    switch (args[i].ToUpper())
+                    {
+                        case "MLB": g = Game.MLB; break;
+                        case "NFL": g = Game.NFL; break;
+                        case "/S": startersOnly = true; break;
+                        case "/MIN": gametimeMin = DateTime.Parse(args[i + 1]); i++; break;
+                        case "/MAX": gametimeMax = DateTime.Parse(args[i + 1]); i++; break;
+                    }
                 }
-            } else if (args[0].ToLower() == "nfl")
-            {
-                IEnumerable<dk.NFL.Player> players = dk.NFL.GetData();
-                dk.NFL.Lineup opt = new dk.NFL.Lineup();
-                if (opt.Optimize(players, 50000))
+                if (g == Game.MLB)
                 {
-                    Console.WriteLine(opt.ForOutput);
+                    IEnumerable<dk.MLB.Player> players = dk.MLB.GetData();
+                    if (startersOnly) players = players.Where(x => x.Starter);
+                    players = players.Where(x => (x.GameTime >= gametimeMin && x.GameTime <= gametimeMax));
+                    dk.MLB.Lineup opt = new dk.MLB.Lineup();
+                    if (opt.Optimize(players, 50000))
+                    {
+                        Console.WriteLine(opt.ForOutput);
+                    }
+                } else if (g == Game.NFL)
+                {
+                    IEnumerable<dk.NFL.Player> players = dk.NFL.GetData();
+                    players = players.Where(x => (x.GameTime >= gametimeMin && x.GameTime <= gametimeMax));
+                    dk.NFL.Lineup opt = new dk.NFL.Lineup();
+                    if (opt.Optimize(players, 50000))
+                    {
+                        Console.WriteLine(opt.ForOutput);
+                    }
                 }
             }
         }
