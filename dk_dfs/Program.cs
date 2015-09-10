@@ -39,7 +39,7 @@ namespace dk_dfs
                     if (startersOnly) players = players.Where(x => x.Starter);
                     players = players.Where(x => (x.GameTime >= gametimeMin && x.GameTime <= gametimeMax));
                     dk.MLB.Lineup opt = new dk.MLB.Lineup();
-                    if (opt.Optimize(players, 50000))
+                    if (opt.Optimize2(players, 50000))
                     {
                         Console.WriteLine(opt.ForOutput);
                     }
@@ -48,7 +48,7 @@ namespace dk_dfs
                     IEnumerable<dk.NFL.Player> players = dk.NFL.GetData();
                     players = players.Where(x => (x.GameTime >= gametimeMin && x.GameTime <= gametimeMax));
                     dk.NFL.Lineup opt = new dk.NFL.Lineup();
-                    if (opt.Optimize(players, 50000))
+                    if (opt.Optimize2(players, 50000))
                     {
                         Console.WriteLine(opt.ForOutput);
                     }

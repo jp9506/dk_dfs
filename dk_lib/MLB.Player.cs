@@ -268,6 +268,36 @@ namespace dk
             public Player OF1 { get; set; }
             public Player OF2 { get; set; }
             public Player OF3 { get; set; }
+            public Player this[int index]
+            {
+                get
+                {
+                    return this.ToArray()[index];
+                }
+                set
+                {
+                    switch (index)
+                    {
+                        case 0: this.P1 = value; break;
+                        case 1: this.P2 = value; break;
+                        case 2: this.C = value; break;
+                        case 3: this.B1 = value; break;
+                        case 4: this.B2 = value; break;
+                        case 5: this.B3 = value; break;
+                        case 6: this.SS = value; break;
+                        case 7: this.OF1 = value; break;
+                        case 8: this.OF2 = value; break;
+                        case 9: this.OF3 = value; break;
+                    }
+                }
+            }
+            public int Length
+            {
+                get
+                {
+                    return this.ToArray().Length;
+                }
+            }
             public Double Salary
             {
                 get
@@ -590,7 +620,39 @@ namespace dk
                 else
                     return false;
             }
-
+            public bool Optimize2(IEnumerable<Player> players, double maxSalary)
+            {
+                Lineup init = this.Copy();
+                if (!init.Optimize(players, maxSalary)) return false;
+                Lineup best = init.Copy();
+                bool done = false;
+                while (!done)
+                {
+                    done = true;
+                    Lineup test0 = best.Copy();
+                    for (int i = 0; i < 10; i++)
+                        if (this[i] == null)
+                            for (int j = i; j < 10; j++)
+                                if (this[j] == null)
+                                    for (int k = j; k < 10; k++)
+                                        if (this[k] == null)
+                                        {
+                                            Lineup test = best.Copy();
+                                            test[i] = null;
+                                            test[j] = null;
+                                            test[k] = null;
+                                            if (test.Optimize(players.Where(x => !test0.ToArray().Where(y => y != null).Any(y => x.Key == y.Key)), maxSalary) && test.Projection > test0.Projection)
+                                            {
+                                                test0 = test.Copy();
+                                                done = false;
+                                            }
+                                        }
+                    best = test0.Copy();
+                }
+                for (int i = 0; i < this.Length; i++)
+                    this[i] = best[i];
+                return true;
+            }
         }
 		public static List<Player> GetData()
         {

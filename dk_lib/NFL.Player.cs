@@ -88,6 +88,13 @@ namespace dk
             {
                 return this.Name + " (" + this.Team + ")";
             }
+            public string Key
+            {
+                get
+                {
+                    return (Name.ToUpper().Replace("JR.", "").Replace(" ", "").Replace("-", "") + " - " + Team + " - " + (int)Salary).ToUpper();
+                }
+            }
         }
         public class Lineup
         {
@@ -100,6 +107,35 @@ namespace dk
             public Player TE { get; set; }
             public Player FLEX { get; set; }
             public Player DST { get; set; }
+            public Player this[int index]
+            {
+                get
+                {
+                    return this.ToArray()[index];
+                }
+                set
+                {
+                    switch(index)
+                    {
+                        case 0: this.QB = value; break;
+                        case 1: this.RB1 = value; break;
+                        case 2: this.RB2 = value; break;
+                        case 3: this.WR1 = value; break;
+                        case 4: this.WR2 = value; break;
+                        case 5: this.WR3 = value; break;
+                        case 6: this.TE = value; break;
+                        case 7: this.FLEX = value; break;
+                        case 8: this.DST = value; break;
+                    }
+                }
+            }
+            public int Length
+            {
+                get
+                {
+                    return this.ToArray().Length;
+                }
+            }
             public Double Salary
             {
                 get
@@ -153,6 +189,39 @@ namespace dk
                     FLEX = this.FLEX,
                     DST = this.DST
                 };
+            }
+            public bool Optimize2(IEnumerable<Player> players, double maxSalary)
+            {
+                Lineup init = this.Copy();
+                if (!init.Optimize(players, maxSalary)) return false;
+                Lineup best = init.Copy();
+                bool done = false;
+                while (!done)
+                {
+                    done = true;
+                    Lineup test0 = best.Copy();
+                    for (int i = 0; i < 9; i++)
+                        if (this[i] == null)
+                            for (int j = i; j < 9; j++)
+                                if (this[j] == null)
+                                    for (int k = j; k < 9; k++)
+                                        if (this[k] == null)
+                                        {
+                                            Lineup test = best.Copy();
+                                            test[i] = null;
+                                            test[j] = null;
+                                            test[k] = null;
+                                            if (test.Optimize(players.Where(x => !test0.ToArray().Where(y => y != null).Any(y => x.Key == y.Key)), maxSalary) && test.Projection > test0.Projection)
+                                            {
+                                                test0 = test.Copy();
+                                                done = false;
+                                            }
+                                        }
+                    best = test0.Copy();
+                }
+                for (int i = 0; i < this.Length; i++)
+                    this[i] = best[i];
+                return true;
             }
             public bool Optimize(IEnumerable<Player> players, double maxSalary)
             {
@@ -223,15 +292,15 @@ namespace dk
                     double oSalary = optLineup.Salary;
                     subs = subs
                         .Where(x =>
-                            (this.QB == null && (x.Pos & Position.QB) != Position.None && oSalary + x.Salary - optLineup.QB.Salary <= maxSalary && x.Projection >= optLineup.QB.Projection) ||
-                            (this.RB1 == null && (x.Pos & Position.RB) != Position.None && oSalary + x.Salary - optLineup.RB1.Salary <= maxSalary && x.Projection >= optLineup.RB1.Projection) ||
-                            (this.RB2 == null && (x.Pos & Position.RB) != Position.None && oSalary + x.Salary - optLineup.RB2.Salary <= maxSalary && x.Projection >= optLineup.RB2.Projection) ||
-                            (this.WR1 == null && (x.Pos & Position.WR) != Position.None && oSalary + x.Salary - optLineup.WR1.Salary <= maxSalary && x.Projection >= optLineup.WR1.Projection) ||
-                            (this.WR2 == null && (x.Pos & Position.WR) != Position.None && oSalary + x.Salary - optLineup.WR2.Salary <= maxSalary && x.Projection >= optLineup.WR2.Projection) ||
-                            (this.WR3 == null && (x.Pos & Position.WR) != Position.None && oSalary + x.Salary - optLineup.WR3.Salary <= maxSalary && x.Projection >= optLineup.WR3.Projection) ||
-                            (this.TE == null && (x.Pos & Position.TE) != Position.None && oSalary + x.Salary - optLineup.TE.Salary <= maxSalary && x.Projection >= optLineup.TE.Projection) ||
-                            (this.FLEX == null && (x.Pos & Position.FLEX) != Position.None && oSalary + x.Salary - optLineup.FLEX.Salary <= maxSalary && x.Projection >= optLineup.FLEX.Projection) ||
-                            (this.DST == null && (x.Pos & Position.DST) != Position.None && oSalary + x.Salary - optLineup.DST.Salary <= maxSalary && x.Projection >= optLineup.DST.Projection)
+                            (this.QB == null && (x.Pos & Position.QB) != Position.None && oSalary + x.Salary - optLineup.QB.Salary <= maxSalary && x.Projection >= optLineup.QB.Projection && x.Salary > optLineup.QB.Salary) ||
+                            (this.RB1 == null && (x.Pos & Position.RB) != Position.None && oSalary + x.Salary - optLineup.RB1.Salary <= maxSalary && x.Projection >= optLineup.RB1.Projection && x.Salary > optLineup.RB1.Salary) ||
+                            (this.RB2 == null && (x.Pos & Position.RB) != Position.None && oSalary + x.Salary - optLineup.RB2.Salary <= maxSalary && x.Projection >= optLineup.RB2.Projection && x.Salary > optLineup.RB2.Salary) ||
+                            (this.WR1 == null && (x.Pos & Position.WR) != Position.None && oSalary + x.Salary - optLineup.WR1.Salary <= maxSalary && x.Projection >= optLineup.WR1.Projection && x.Salary > optLineup.WR1.Salary) ||
+                            (this.WR2 == null && (x.Pos & Position.WR) != Position.None && oSalary + x.Salary - optLineup.WR2.Salary <= maxSalary && x.Projection >= optLineup.WR2.Projection && x.Salary > optLineup.WR2.Salary) ||
+                            (this.WR3 == null && (x.Pos & Position.WR) != Position.None && oSalary + x.Salary - optLineup.WR3.Salary <= maxSalary && x.Projection >= optLineup.WR3.Projection && x.Salary > optLineup.WR3.Salary) ||
+                            (this.TE == null && (x.Pos & Position.TE) != Position.None && oSalary + x.Salary - optLineup.TE.Salary <= maxSalary && x.Projection >= optLineup.TE.Projection && x.Salary > optLineup.TE.Salary) ||
+                            (this.FLEX == null && (x.Pos & Position.FLEX) != Position.None && oSalary + x.Salary - optLineup.FLEX.Salary <= maxSalary && x.Projection >= optLineup.FLEX.Projection && x.Salary > optLineup.FLEX.Salary) ||
+                            (this.DST == null && (x.Pos & Position.DST) != Position.None && oSalary + x.Salary - optLineup.DST.Salary <= maxSalary && x.Projection >= optLineup.DST.Projection && x.Salary > optLineup.DST.Salary)
                         ).ToList();
                     // Determine best option to replace a player
                     double bestScore = -1;
