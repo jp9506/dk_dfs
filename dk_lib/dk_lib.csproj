@@ -43,6 +43,7 @@
   <ItemGroup>
     <Compile Include="Browser.cs" />
     <Compile Include="MLB.Player.cs" />
+    <Compile Include="NFL.Player_old.cs" />
     <Compile Include="NFL.Player.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
